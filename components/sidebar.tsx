@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Home, Users, UserIcon as UserMd, Activity, AlertCircle, DollarSign } from "lucide-react"
+import { Home, Users, UserIcon as UserMd, AlertCircle, DollarSign, LayoutDashboard, Calendar } from "lucide-react"
 
 export function Sidebar() {
   return (
@@ -17,9 +17,9 @@ export function Sidebar() {
           <UserMd className="h-5 w-5" />
           <span>Doctors</span>
         </Link>
-        <Link href="/monitoring" className="flex items-center space-x-2 px-4 py-2 mt-4 hover:bg-accent rounded-lg">
-          <Activity className="h-5 w-5" />
-          <span>Health Monitoring</span>
+        <Link href="/appointments" className="flex items-center space-x-2 px-4 py-2 mt-4 hover:bg-accent rounded-lg">
+          <Calendar className="h-5 w-5" />
+          <span>Appointments</span>
         </Link>
         <Link href="/emergency" className="flex items-center space-x-2 px-4 py-2 mt-4 hover:bg-accent rounded-lg">
           <AlertCircle className="h-5 w-5" />
@@ -28,6 +28,10 @@ export function Sidebar() {
         <Link href="/billing" className="flex items-center space-x-2 px-4 py-2 mt-4 hover:bg-accent rounded-lg">
           <DollarSign className="h-5 w-5" />
           <span>Billing</span>
+        </Link>
+        <Link href="/layout" className="flex items-center space-x-2 px-4 py-2 mt-4 hover:bg-accent rounded-lg">
+          <LayoutDashboard className="h-5 w-5" />
+          <span>Hospital Layout</span>
         </Link>
       </nav>
     </div>
