@@ -8,122 +8,149 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import PatientDetails from "./Components/PatientDetails" // Import the new component
 
-// This would typically come from an API
-const initialPatients = [
-  { id: 1, name: "John Doe", age: 45, condition: "Stable", doctor: "Dr. Smith", room: "201", caretaker: "Jane Doe" },
-  {
-    id: 2,
-    name: "Jane Smith",
-    age: 32,
-    condition: "Critical",
-    doctor: "Dr. Johnson",
-    room: "ICU-3",
-    caretaker: "John Smith",
-  },
-  {
-    id: 3,
-    name: "Bob Brown",
-    age: 58,
-    condition: "Recovering",
-    doctor: "Dr. Williams",
-    room: "305",
-    caretaker: "Alice Brown",
-  },
-  {
-    id: 4,
-    name: "Alice Green",
-    age: 27,
-    condition: "Stable",
-    doctor: "Dr. Davis",
-    room: "102",
-    caretaker: "Tom Green",
-  },
-]
+export type Patient = {
+  _id: string
+  name: string
+  age: number
+  medical_conditions: string[]
+  device_id?: string
+  assigned_doctor?: string
+}
 
-// This would typically come from an API
 const doctors = ["Dr. Smith", "Dr. Johnson", "Dr. Williams", "Dr. Davis"]
 
 export default function PatientsPage() {
-  const [patients, setPatients] = useState(initialPatients)
+  const [patients, setPatients] = useState<Patient[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedPatient, setSelectedPatient] = useState(null)
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedPatient, setEditedPatient] = useState(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isViewingDetails, setIsViewingDetails] = useState(false)
+  const backend = process.env.NEXT_PUBLIC_BACKEND_URL
 
-  // Simulating API call
   useEffect(() => {
-    // In a real application, this would be an API call
-    // For example:
-    // const fetchPatients = async () => {
-    //   const response = await fetch('/api/patients');
-    //   const data = await response.json();
-    //   setPatients(data);
-    // }
-    // fetchPatients();
+    const fetchPatients = async () => {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        console.error("No token found")
+        return
+      }
 
-    // For now, we'll just use the initial data
-    setPatients(initialPatients)
-  }, [])
+      try {
+        const response = await fetch(`${backend}/api/patients`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch patients")
+        }
+
+        const data: Patient[] = await response.json()
+        console.log(data)
+        setPatients(data)
+      } catch (error) {
+        console.error("Error fetching patients:", error)
+      }
+    }
+
+    fetchPatients()
+  }, [backend])
 
   const filteredPatients = patients.filter((patient) => patient.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
-  const handleAddPatient = (newPatient) => {
-    // In a real application, this would be an API call
-    // For example:
-    // const addPatient = async (patient) => {
-    //   const response = await fetch('/api/patients', {
-    //     method: 'POST',
-    //     body: JSON.stringify(patient),
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     }
-    //   });
-    //   const data = await response.json();
-    //   setPatients(prevPatients => [...prevPatients, data]);
-    // }
-    // addPatient(newPatient);
+  const handleAddPatient = async (newPatient: Omit<Patient, "_id">) => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      console.error("No token found")
+      return
+    }
 
-    // For now, we'll just add it to the local state
-    setPatients((prevPatients) => [...prevPatients, { id: prevPatients.length + 1, ...newPatient }])
+    try {
+      const response = await fetch(`${backend}/api/patients`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newPatient)
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add patient")
+      }
+
+      const data = await response.json()
+      setPatients((prevPatients) => [...prevPatients, data.patient])
+      setIsDialogOpen(false) // Close the dialog on successful submission
+    } catch (error) {
+      console.error("Error adding patient:", error)
+    }
   }
 
-  const handleEditPatient = (editedPatient) => {
-    // In a real application, this would be an API call
-    // For example:
-    // const updatePatient = async (patient) => {
-    //   const response = await fetch(`/api/patients/${patient.id}`, {
-    //     method: 'PUT',
-    //     body: JSON.stringify(patient),
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     }
-    //   });
-    //   const data = await response.json();
-    //   setPatients(prevPatients => prevPatients.map(p => p.id === data.id ? data : p));
-    // }
-    // updatePatient(editedPatient);
+  const handleEditPatient = async (editedPatient: Patient) => {
+    const token = localStorage.getItem("token")
+    console.log(editedPatient)
+    if (!token) {
+      console.error("No token found")
+      return
+    }
 
-    // For now, we'll just update the local state
-    setPatients((prevPatients) => prevPatients.map((p) => (p.id === editedPatient.id ? editedPatient : p)))
-    setIsEditing(false)
-    setSelectedPatient(editedPatient)
+    try {
+      const response = await fetch(`${backend}/api/patients/${editedPatient._id}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(editedPatient)
+      })
+      console.log(response)
+
+      if (!response.ok) {
+        throw new Error("Failed to update patient")
+      }
+
+      const data = await response.json()
+      setPatients((prevPatients) => prevPatients.map((p) => (p._id === data.patient._id ? data.patient : p)))
+      setIsEditing(false)
+      setSelectedPatient(data.patient)
+      setIsDialogOpen(false) // Close the dialog on successful submission
+    } catch (error) {
+      console.error("Error updating patient:", error)
+    }
   }
 
-  const handleDeletePatient = (id) => {
-    // In a real application, this would be an API call
-    // For example:
-    // const deletePatient = async (id) => {
-    //   await fetch(`/api/patients/${id}`, {
-    //     method: 'DELETE'
-    //   });
-    //   setPatients(prevPatients => prevPatients.filter(p => p.id !== id));
-    // }
-    // deletePatient(id);
+  const handleDeletePatient = async (id: string) => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      console.error("No token found")
+      return
+    }
 
-    // For now, we'll just update the local state
-    setPatients((prevPatients) => prevPatients.filter((p) => p.id !== id))
-    setSelectedPatient(null)
+    try {
+      const response = await fetch(`${backend}/api/patients/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete patient")
+      }
+
+      setPatients((prevPatients) => prevPatients.filter((p) => p._id !== id))
+      setSelectedPatient(null)
+    } catch (error) {
+      console.error("Error deleting patient:", error)
+    }
   }
 
   return (
@@ -141,13 +168,18 @@ export default function PatientsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
             />
-            <Dialog>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>Add Patient</Button>
+                <Button onClick={() => { setIsDialogOpen(true); setIsEditing(false); setSelectedPatient(null); setIsViewingDetails(false); }}>Add Patient</Button>
               </DialogTrigger>
-              <DialogContent>
-                <PatientForm onSubmit={handleAddPatient} doctors={doctors} />
-              </DialogContent>
+              {!isEditing && !isViewingDetails && (
+                <DialogContent className="max-w-4xl"> {/* Adjust the width of the dialog */}
+                  <DialogHeader>
+                    <DialogTitle>Add Patient</DialogTitle>
+                  </DialogHeader>
+                  <PatientForm onSubmit={handleAddPatient} doctors={doctors} />
+                </DialogContent>
+              )}
             </Dialog>
           </div>
           <Table>
@@ -157,20 +189,21 @@ export default function PatientsPage() {
                 <TableHead>Age</TableHead>
                 <TableHead>Condition</TableHead>
                 <TableHead>Assigned Doctor</TableHead>
-                <TableHead>Room</TableHead>
+                <TableHead>Device ID</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPatients.map((patient) => (
-                <TableRow key={patient.id}>
+                <TableRow key={patient._id}>
                   <TableCell>{patient.name}</TableCell>
                   <TableCell>{patient.age}</TableCell>
-                  <TableCell>{patient.condition}</TableCell>
-                  <TableCell>{patient.doctor}</TableCell>
-                  <TableCell>{patient.room}</TableCell>
+                  <TableCell>{patient.medical_conditions.join(", ")}</TableCell>
+                  <TableCell>{patient.assigned_doctor || "N/A"}</TableCell>
+                  <TableCell>{patient.device_id || "N/A"}</TableCell>
                   <TableCell>
-                    <Button onClick={() => setSelectedPatient(patient)}>View Details</Button>
+                    <Button onClick={() => { setSelectedPatient(patient); setIsDialogOpen(true); setIsEditing(true); setIsViewingDetails(false); }}>Edit</Button>
+                    <Button variant="secondary" onClick={() => { setSelectedPatient(patient); setIsDialogOpen(true); setIsEditing(false); setIsViewingDetails(true); }}>View Details</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -181,53 +214,24 @@ export default function PatientsPage() {
 
       {selectedPatient && (
         <Dialog
-          open={!!selectedPatient}
-          onOpenChange={() => {
-            setSelectedPatient(null)
-            setIsEditing(false)
+          open={isDialogOpen}
+          onOpenChange={(open) => {
+            setIsDialogOpen(open)
+            if (!open) {
+              setSelectedPatient(null)
+              setIsEditing(false)
+              setIsViewingDetails(false)
+            }
           }}
         >
-          <DialogContent>
+          <DialogContent className="max-w-4xl"> {/* Adjust the width of the dialog */}
             <DialogHeader>
               <DialogTitle>{isEditing ? "Edit Patient" : "Patient Details"}</DialogTitle>
             </DialogHeader>
             {isEditing ? (
-              <PatientForm onSubmit={handleEditPatient} initialData={selectedPatient} doctors={doctors} />
+              <PatientForm onSubmit={() => handleEditPatient(selectedPatient)} initialData={selectedPatient} doctors={doctors} />
             ) : (
-              <>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Name</Label>
-                    <div className="col-span-3">{selectedPatient.name}</div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Age</Label>
-                    <div className="col-span-3">{selectedPatient.age}</div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Condition</Label>
-                    <div className="col-span-3">{selectedPatient.condition}</div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Doctor</Label>
-                    <div className="col-span-3">{selectedPatient.doctor}</div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Room</Label>
-                    <div className="col-span-3">{selectedPatient.room}</div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Caretaker</Label>
-                    <div className="col-span-3">{selectedPatient.caretaker}</div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={() => setIsEditing(true)}>Edit</Button>
-                  <Button variant="destructive" onClick={() => handleDeletePatient(selectedPatient.id)}>
-                    Delete
-                  </Button>
-                </DialogFooter>
-              </>
+              <PatientDetails patient={selectedPatient} onDelete={handleDeletePatient} />
             )}
           </DialogContent>
         </Dialog>
@@ -236,10 +240,22 @@ export default function PatientsPage() {
   )
 }
 
-function PatientForm({ onSubmit, initialData = {}, doctors }) {
-  const [patient, setPatient] = useState(initialData)
+type PatientFormProps = {
+  onSubmit: (patient: Omit<Patient, "_id">) => void | Promise<void>
+  initialData?: Partial<Patient>
+  doctors: string[]
+}
 
-  const handleSubmit = (e) => {
+function PatientForm({ onSubmit, initialData = {}, doctors }: PatientFormProps) {
+  const [patient, setPatient] = useState<Omit<Patient, "_id">>({
+    name: initialData.name || "",
+    age: initialData.age || 0,
+    medical_conditions: initialData.medical_conditions || [],
+    device_id: initialData.device_id || "",
+    assigned_doctor: initialData.assigned_doctor || ""
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(patient)
   }
@@ -253,7 +269,7 @@ function PatientForm({ onSubmit, initialData = {}, doctors }) {
           </Label>
           <Input
             id="name"
-            value={patient.name || ""}
+            value={patient.name}
             onChange={(e) => setPatient({ ...patient, name: e.target.value })}
             className="col-span-3"
           />
@@ -265,19 +281,19 @@ function PatientForm({ onSubmit, initialData = {}, doctors }) {
           <Input
             id="age"
             type="number"
-            value={patient.age || ""}
+            value={patient.age}
             onChange={(e) => setPatient({ ...patient, age: Number.parseInt(e.target.value) })}
             className="col-span-3"
           />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="condition" className="text-right">
+          <Label htmlFor="medical_conditions" className="text-right">
             Condition
           </Label>
           <Input
-            id="condition"
-            value={patient.condition || ""}
-            onChange={(e) => setPatient({ ...patient, condition: e.target.value })}
+            id="medical_conditions"
+            value={patient.medical_conditions.join(", ")}
+            onChange={(e) => setPatient({ ...patient, medical_conditions: e.target.value.split(", ") })}
             className="col-span-3"
           />
         </div>
@@ -285,7 +301,7 @@ function PatientForm({ onSubmit, initialData = {}, doctors }) {
           <Label htmlFor="doctor" className="text-right">
             Doctor
           </Label>
-          <Select value={patient.doctor || ""} onValueChange={(value) => setPatient({ ...patient, doctor: value })}>
+          <Select value={patient.assigned_doctor} onValueChange={(value) => setPatient({ ...patient, assigned_doctor: value })}>
             <SelectTrigger className="col-span-3">
               <SelectValue placeholder="Select a doctor" />
             </SelectTrigger>
@@ -299,24 +315,13 @@ function PatientForm({ onSubmit, initialData = {}, doctors }) {
           </Select>
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="room" className="text-right">
-            Room
+          <Label htmlFor="device_id" className="text-right">
+            Device ID
           </Label>
           <Input
-            id="room"
-            value={patient.room || ""}
-            onChange={(e) => setPatient({ ...patient, room: e.target.value })}
-            className="col-span-3"
-          />
-        </div>
-        <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="caretaker" className="text-right">
-            Caretaker
-          </Label>
-          <Input
-            id="caretaker"
-            value={patient.caretaker || ""}
-            onChange={(e) => setPatient({ ...patient, caretaker: e.target.value })}
+            id="device_id"
+            value={patient.device_id}
+            onChange={(e) => setPatient({ ...patient, device_id: e.target.value })}
             className="col-span-3"
           />
         </div>
@@ -327,4 +332,3 @@ function PatientForm({ onSubmit, initialData = {}, doctors }) {
     </form>
   )
 }
-

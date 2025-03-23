@@ -18,6 +18,11 @@ export function ProtectedRoute({ children, allowedRoles = [] }: ProtectedRoutePr
 
   useEffect(() => {
     if (!isLoading) {
+      // Allow access to the login page
+      if (pathname === "/login") {
+        return
+      }
+
       // If not logged in, redirect to login
       if (!user) {
         router.push(`/login?returnUrl=${encodeURIComponent(pathname)}`)

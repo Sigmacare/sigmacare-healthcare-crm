@@ -15,7 +15,7 @@ type User = {
 type AuthContextType = {
   user: User | null
   login: (email: string, password: string, type?: string) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
   isLoading: boolean
   error: string | null
 }
@@ -27,18 +27,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const backend = process.env.NEXT_PUBLIC_BACKEND_URL
 
   useEffect(() => {
     // Check if user is already logged in
     const checkAuth = async () => {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        setIsLoading(false)
+        return
+      }
+      console.log("Checking auth")
       try {
-        const response = await fetch("/api/auth/me")
+        const response = await fetch(backend + "/api/users/me", {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        })
+
         if (response.ok) {
           const userData = await response.json()
-          setUser(userData.user)
+          console.log("User data:", userData)
+          const user: User = {
+            id: userData?.id || userData?._id,
+            username: userData?.username || userData?.name,
+            name: userData?.name || userData?.username,
+            email: userData?.email,
+            role: "user",
+            hospitalId: userData?.hospitalId,
+          }
+
+          setUser(user)
+        } else {
+          localStorage.removeItem("token")
         }
       } catch (error) {
         console.error("Authentication check failed:", error)
+        localStorage.removeItem("token")
       } finally {
         setIsLoading(false)
       }
@@ -53,9 +79,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       // Determine which endpoint to use based on the type
-      const endpoint = type === "admin" ? "/api/auth/admin-login" : "/api/auth/login"
+      const backend = process.env.NEXT_PUBLIC_BACKEND_URL
+      const endpoint = type === "admin" ? "/api/admin/login" : "/api/users/login"
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(backend + endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -64,13 +91,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
 
       const data = await response.json()
+      // set token in local storage
+      localStorage.setItem("token", data.token)
 
       if (!response.ok) {
         throw new Error(data.message || "Login failed")
       }
 
       // Set user data based on the response
-      const userData = {
+      const userData: User = {
         id: data.user?.id || data.user?._id,
         username: data.user?.username || data.user?.name,
         name: data.user?.name || data.user?.username,
@@ -79,10 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hospitalId: data.user?.hospitalId,
       }
 
+
       setUser(userData)
       router.push("/") // Redirect to dashboard after login
     } catch (error) {
-      setError(error.message || "An error occurred during login")
+      setError(String(error) || "An error occurred during login")
       console.error("Login error:", error)
     } finally {
       setIsLoading(false)
@@ -91,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", {
+      await fetch(backend + "/api/logout", {
         method: "POST",
       })
       setUser(null)

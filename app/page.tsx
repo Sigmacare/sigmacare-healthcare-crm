@@ -1,3 +1,4 @@
+"use client"
 import { OverviewPanel } from "@/components/overview-panel"
 import { PatientManagement } from "@/components/patient-management"
 import { DoctorSchedule } from "@/components/doctor-schedule"

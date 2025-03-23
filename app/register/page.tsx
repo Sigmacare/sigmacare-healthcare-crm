@@ -32,7 +32,7 @@ export default function RegisterPage() {
     setError(null)
 
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/admin/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -73,11 +73,11 @@ export default function RegisterPage() {
             )}
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Full Name</Label>
+                <Label htmlFor="username">User Name</Label>
                 <Input
                   id="username"
                   name="username"
-                  placeholder="John Doe"
+                  placeholder="johndoe(No spaces)"
                   value={formData.username}
                   onChange={handleChange}
                   required
