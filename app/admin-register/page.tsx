@@ -123,7 +123,7 @@ export default function AdminRegisterPage() {
               <h3 className="text-lg font-medium">Hospital Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="hospital-name">Hospital Name</Label>
+                  <Label htmlFor="hospital-name">Renai Medicity</Label>
                   <Input
                     id="hospital-name"
                     name="name"

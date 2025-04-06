@@ -143,7 +143,7 @@ export default function RegisterPage() {
               {isHospitalAdmin && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="hospital.name">Hospital Name</Label>
+                    <Label htmlFor="hospital.name">Renai Medicity</Label>
                     <Input
                       id="hospital.name"
                       name="hospital.name"

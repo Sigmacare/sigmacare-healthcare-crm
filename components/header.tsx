@@ -18,7 +18,7 @@ export function Header() {
   return (
     <header className="bg-background border-b border-border h-16 flex items-center justify-between px-6">
       <div className="flex items-center">
-        <h2 className="text-2xl font-semibold">Hospital Name</h2>
+        <h2 className="text-2xl font-semibold">Renai Medicity</h2>
       </div>
       <div className="flex items-center space-x-4">
         <ModeToggle />
