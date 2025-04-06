@@ -2,7 +2,7 @@ import React from "react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 
 type HealthMetricsChartProps = {
-    data: { time: string; value: number }[]
+    data: { time: string; HeartRate: number }[] | { time: string; SpO2: number }[]
     title: string
     color: string
 }

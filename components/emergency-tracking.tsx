@@ -2,95 +2,70 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { MapPin } from "lucide-react"
-import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api"
+import { MapContainer, TileLayer, Marker } from "react-leaflet"
+import "leaflet/dist/leaflet.css"
+import L from "leaflet"
+import RoutingMachine from "./RoutingMachine" // Custom routing component
 
-// This would typically come from an API
-const initialEmergencies = [
-  { id: 1, type: "Heart Attack", location: "123 Main St", status: "En Route", lat: 40.7128, lng: -74.006 },
-  { id: 2, type: "Car Accident", location: "456 Elm St", status: "Reported", lat: 40.7282, lng: -73.7949 },
-]
+interface Emergency {
+  device_code: string
+  alertType: string[]
+  details: string
+  location: string
+  device_location?: string
+  latitude?: number
+  longitude?: number
+  resolved?: boolean
+}
+
+interface EmergencyTrackingProps {
+  selectedEmergency: Emergency | null
+}
 
 const mapContainerStyle = {
   width: "100%",
   height: "400px",
 }
 
-const center = {
-  lat: 40.7128,
-  lng: -74.006,
-}
+const center = { lat: 10.0384, lng: 76.2803 }
+const hospitalLocation = { lat: 9.9816, lng: 76.2803 }
 
-export function EmergencyTracking() {
-  const [emergencies, setEmergencies] = useState(initialEmergencies)
-  const [selectedEmergency, setSelectedEmergency] = useState(null)
+// Define custom icons
+const hospitalIcon = new L.Icon({
+  iconUrl: "/hospital-icon.png", // Ensure the path is correct
+  iconSize: [25, 25], // Adjusted size
+  iconAnchor: [12, 25],
+})
 
-  const { isLoaded } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
-  })
+const emergencyIcon = new L.Icon({
+  iconUrl: "/emergency-icon.png", // Ensure the path is correct
+  iconSize: [25, 25], // Adjusted size
+  iconAnchor: [12, 25],
+})
 
-  useEffect(() => {
-    // In a real application, you would fetch emergencies from an API
-    // and update their status periodically
-    const interval = setInterval(() => {
-      setEmergencies((prevEmergencies) =>
-        prevEmergencies.map((emergency) => ({
-          ...emergency,
-          status: Math.random() > 0.5 ? "En Route" : "Reported",
-        })),
-      )
-    }, 5000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleEmergencyClick = (emergency) => {
-    setSelectedEmergency(emergency)
-  }
-
+export function EmergencyTracking({ selectedEmergency }: EmergencyTrackingProps) {
   return (
-    <Card>
+    <Card className="z-0">
       <CardHeader>
         <CardTitle>Emergency Tracking</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            {emergencies.map((emergency) => (
-              <div key={emergency.id} className="mb-4 p-4 border rounded-lg">
-                <h3 className="text-lg font-semibold">{emergency.type}</h3>
-                <p>
-                  <MapPin className="inline mr-2" />
-                  {emergency.location}
-                </p>
-                <Badge variant={emergency.status === "En Route" ? "default" : "secondary"}>{emergency.status}</Badge>
-                <Button className="mt-2" onClick={() => handleEmergencyClick(emergency)}>
-                  Track on Map
-                </Button>
-              </div>
-            ))}
-          </div>
-          <div>
-            {isLoaded ? (
-              <GoogleMap mapContainerStyle={mapContainerStyle} center={center} zoom={10}>
-                {emergencies.map((emergency) => (
-                  <Marker
-                    key={emergency.id}
-                    position={{ lat: emergency.lat, lng: emergency.lng }}
-                    icon={emergency.status === "En Route" ? "/ambulance-icon.png" : "/emergency-icon.png"}
-                  />
-                ))}
-              </GoogleMap>
-            ) : (
-              <div>Loading map...</div>
-            )}
-          </div>
-        </div>
+        <MapContainer style={mapContainerStyle} center={center} zoom={10}>
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          {/* Hospital Marker */}
+          <Marker position={hospitalLocation} icon={hospitalIcon} />
+          {/* Emergency Marker and Routing */}
+          {selectedEmergency && (
+            <>
+              <Marker position={[selectedEmergency.latitude!, selectedEmergency.longitude!]} icon={emergencyIcon} />
+              <RoutingMachine from={hospitalLocation} to={{ lat: selectedEmergency.latitude!, lng: selectedEmergency.longitude! }} />
+            </>
+          )}
+        </MapContainer>
       </CardContent>
     </Card>
   )
 }
-

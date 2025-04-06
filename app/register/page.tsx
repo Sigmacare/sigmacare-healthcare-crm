@@ -11,11 +11,21 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
 
 export default function RegisterPage() {
+  const [isHospitalAdmin, setIsHospitalAdmin] = useState(false)
+  const backend = process.env.NEXT_PUBLIC_BACKEND_URL
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     password: "",
     phone: "",
+    hospital: {
+      name: "",
+      email: "",
+      contact: "",
+      city: "",
+      state: "",
+      address: ""
+    }
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,7 +33,18 @@ export default function RegisterPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    if (name.startsWith("hospital.")) {
+      const hospitalField = name.split(".")[1]
+      setFormData((prev) => ({
+        ...prev,
+        hospital: {
+          ...prev.hospital,
+          [hospitalField]: value
+        }
+      }))
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }))
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -32,7 +53,8 @@ export default function RegisterPage() {
     setError(null)
 
     try {
-      const response = await fetch("/api/admin/register", {
+      const endpoint = isHospitalAdmin ? "/api/admin/register" : "/api/users/register"
+      const response = await fetch(backend + endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -41,6 +63,7 @@ export default function RegisterPage() {
       })
 
       const data = await response.json()
+      console.log("Registration response:", data)
 
       if (!response.ok) {
         throw new Error(data.message || "Registration failed")
@@ -117,6 +140,77 @@ export default function RegisterPage() {
                   required
                 />
               </div>
+              {isHospitalAdmin && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital.name">Hospital Name</Label>
+                    <Input
+                      id="hospital.name"
+                      name="hospital.name"
+                      placeholder="City Hospital"
+                      value={formData.hospital.name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital.email">Hospital Email</Label>
+                    <Input
+                      id="hospital.email"
+                      name="hospital.email"
+                      type="email"
+                      placeholder="contact@cityhospital.com"
+                      value={formData.hospital.email}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital.contact">Hospital Contact</Label>
+                    <Input
+                      id="hospital.contact"
+                      name="hospital.contact"
+                      placeholder="1234567890"
+                      value={formData.hospital.contact}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital.city">City</Label>
+                    <Input
+                      id="hospital.city"
+                      name="hospital.city"
+                      placeholder="New York"
+                      value={formData.hospital.city}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital.state">State</Label>
+                    <Input
+                      id="hospital.state"
+                      name="hospital.state"
+                      placeholder="NY"
+                      value={formData.hospital.state}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hospital.address">Address</Label>
+                    <Input
+                      id="hospital.address"
+                      name="hospital.address"
+                      placeholder="123 Main St"
+                      value={formData.hospital.address}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </>
+              )}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
@@ -131,8 +225,12 @@ export default function RegisterPage() {
             </Link>
           </p>
         </CardFooter>
+        <div className="flex justify-center mt-4">
+          <Button variant="link" onClick={() => setIsHospitalAdmin(!isHospitalAdmin)}>
+            {isHospitalAdmin ? "Switch to User Registration" : "Switch to Hospital Admin Registration"}
+          </Button>
+        </div>
       </Card>
     </div>
   )
 }
-

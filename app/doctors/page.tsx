@@ -9,101 +9,151 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-// This would typically come from an API
-const initialDoctors = [
-  { id: 1, name: "Dr. Smith", specialty: "Cardiology", availability: "9:00 AM - 5:00 PM", appointments: 8 },
-  { id: 2, name: "Dr. Johnson", specialty: "Pediatrics", availability: "10:00 AM - 6:00 PM", appointments: 6 },
-  { id: 3, name: "Dr. Williams", specialty: "Neurology", availability: "8:00 AM - 4:00 PM", appointments: 7 },
-  { id: 4, name: "Dr. Davis", specialty: "Orthopedics", availability: "11:00 AM - 7:00 PM", appointments: 5 },
-]
-
-// This would typically come from an API
 const specialties = ["Cardiology", "Pediatrics", "Neurology", "Orthopedics", "General Practice"]
 
+type Doctor = {
+  _id: string
+  name: string
+  specialization: string
+  experience: number
+  contact: string
+  hospitalId: string
+  createdAt: string
+  updatedAt: string
+}
+
 export default function DoctorsPage() {
-  const [doctors, setDoctors] = useState(initialDoctors)
+  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedDoctor, setSelectedDoctor] = useState(null)
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedDoctor, setEditedDoctor] = useState(null)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const backend = process.env.NEXT_PUBLIC_BACKEND_URL
 
-  // Simulating API call
   useEffect(() => {
-    // In a real application, this would be an API call
-    // For example:
-    // const fetchDoctors = async () => {
-    //   const response = await fetch('/api/doctors');
-    //   const data = await response.json();
-    //   setDoctors(data);
-    // }
-    // fetchDoctors();
+    const fetchDoctors = async () => {
+      const token = localStorage.getItem("token")
+      if (!token) {
+        console.error("No token found")
+        return
+      }
 
-    // For now, we'll just use the initial data
-    setDoctors(initialDoctors)
+      try {
+        const response = await fetch(backend + "/api/admin/doctors", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch doctors")
+        }
+
+        const data = await response.json()
+        setDoctors(data.doctors)
+      } catch (error) {
+        console.error("Error fetching doctors:", error)
+      }
+    }
+
+    fetchDoctors()
   }, [])
 
   const filteredDoctors = doctors.filter(
     (doctor) =>
       doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase()),
+      doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleAddDoctor = (newDoctor) => {
-    // In a real application, this would be an API call
-    // For example:
-    // const addDoctor = async (doctor) => {
-    //   const response = await fetch('/api/doctors', {
-    //     method: 'POST',
-    //     body: JSON.stringify(doctor),
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     }
-    //   });
-    //   const data = await response.json();
-    //   setDoctors(prevDoctors => [...prevDoctors, data]);
-    // }
-    // addDoctor(newDoctor);
+  const handleAddDoctor = async (newDoctor: Doctor) => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      console.error("No token found")
+      return
+    }
 
-    // For now, we'll just add it to the local state
-    setDoctors((prevDoctors) => [...prevDoctors, { id: prevDoctors.length + 1, ...newDoctor }])
+    try {
+      const response = await fetch(backend + "/api/admin/add-doctor", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newDoctor)
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to add doctor")
+      }
+
+      const data = await response.json()
+      setDoctors((prevDoctors) => [...prevDoctors, data.doctor])
+      setIsAddDialogOpen(false) // Close the dialog on successful submission
+    } catch (error) {
+      console.error("Error adding doctor:", error)
+    }
   }
 
-  const handleEditDoctor = (editedDoctor) => {
-    // In a real application, this would be an API call
-    // For example:
-    // const updateDoctor = async (doctor) => {
-    //   const response = await fetch(`/api/doctors/${doctor.id}`, {
-    //     method: 'PUT',
-    //     body: JSON.stringify(doctor),
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     }
-    //   });
-    //   const data = await response.json();
-    //   setDoctors(prevDoctors => prevDoctors.map(d => d.id === data.id ? data : d));
-    // }
-    // updateDoctor(editedDoctor);
+  const handleEditDoctor = async (editedDoctor: Doctor) => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      console.error("No token found")
+      return
+    }
 
-    // For now, we'll just update the local state
-    setDoctors((prevDoctors) => prevDoctors.map((d) => (d.id === editedDoctor.id ? editedDoctor : d)))
-    setIsEditing(false)
-    setSelectedDoctor(editedDoctor)
+    try {
+      const response = await fetch(backend + `/api/admin/doctor/${editedDoctor._id}`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(editedDoctor)
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to update doctor")
+      }
+
+      const data = await response.json()
+      setDoctors((prevDoctors) => prevDoctors.map((d) => (d._id === data.doctor._id ? data.doctor : d)))
+      setIsEditing(false)
+      setSelectedDoctor(data.doctor)
+      setIsEditDialogOpen(false) // Close the dialog on successful submission
+    } catch (error) {
+      console.error("Error updating doctor:", error)
+    }
   }
 
-  const handleDeleteDoctor = (id) => {
-    // In a real application, this would be an API call
-    // For example:
-    // const deleteDoctor = async (id) => {
-    //   await fetch(`/api/doctors/${id}`, {
-    //     method: 'DELETE'
-    //   });
-    //   setDoctors(prevDoctors => prevDoctors.filter(d => d.id !== id));
-    // }
-    // deleteDoctor(id);
+  const handleDeleteDoctor = async (id: string) => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      console.error("No token found")
+      return
+    }
 
-    // For now, we'll just update the local state
-    setDoctors((prevDoctors) => prevDoctors.filter((d) => d.id !== id))
-    setSelectedDoctor(null)
+    try {
+      const response = await fetch(backend + `/api/admin/doctor/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete doctor")
+      }
+
+      setDoctors((prevDoctors) => prevDoctors.filter((d) => d._id !== id))
+      setSelectedDoctor(null)
+    } catch (error) {
+      console.error("Error deleting doctor:", error)
+    }
   }
 
   return (
@@ -121,12 +171,15 @@ export default function DoctorsPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
             />
-            <Dialog>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button>Add Doctor</Button>
+                <Button onClick={() => { setIsAddDialogOpen(true); setIsEditing(false); setSelectedDoctor(null); }}>Add Doctor</Button>
               </DialogTrigger>
               <DialogContent>
-                <DoctorForm onSubmit={handleAddDoctor} specialties={specialties} />
+                <DialogHeader>
+                  <DialogTitle>Add Doctor</DialogTitle>
+                </DialogHeader>
+                <DoctorForm onSubmit={handleAddDoctor} specialties={specialties} closeDialog={() => setIsAddDialogOpen(false)} />
               </DialogContent>
             </Dialog>
           </div>
@@ -134,21 +187,22 @@ export default function DoctorsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Specialty</TableHead>
-                <TableHead>Availability</TableHead>
-                <TableHead>Appointments</TableHead>
+                <TableHead>Specialization</TableHead>
+                <TableHead>Experience</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredDoctors.map((doctor) => (
-                <TableRow key={doctor.id}>
+                <TableRow key={doctor._id}>
                   <TableCell>{doctor.name}</TableCell>
-                  <TableCell>{doctor.specialty}</TableCell>
-                  <TableCell>{doctor.availability}</TableCell>
-                  <TableCell>{doctor.appointments}</TableCell>
+                  <TableCell>{doctor.specialization}</TableCell>
+                  <TableCell>{doctor.experience}</TableCell>
+                  <TableCell>{doctor.contact}</TableCell>
                   <TableCell>
-                    <Button onClick={() => setSelectedDoctor(doctor)}>View Details</Button>
+                    <Button onClick={() => { setSelectedDoctor(doctor); setIsEditDialogOpen(true); setIsEditing(true); }}>Edit</Button>
+                    <Button variant="secondary" onClick={() => { setSelectedDoctor(doctor); setIsViewDialogOpen(true); setIsEditing(false); }}>View Details</Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -158,60 +212,94 @@ export default function DoctorsPage() {
       </Card>
 
       {selectedDoctor && (
-        <Dialog
-          open={!!selectedDoctor}
-          onOpenChange={() => {
-            setSelectedDoctor(null)
-            setIsEditing(false)
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{isEditing ? "Edit Doctor" : "Doctor Details"}</DialogTitle>
-            </DialogHeader>
-            {isEditing ? (
-              <DoctorForm onSubmit={handleEditDoctor} initialData={selectedDoctor} specialties={specialties} />
-            ) : (
-              <>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Name</Label>
-                    <div className="col-span-3">{selectedDoctor.name}</div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Specialty</Label>
-                    <div className="col-span-3">{selectedDoctor.specialty}</div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Availability</Label>
-                    <div className="col-span-3">{selectedDoctor.availability}</div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Appointments</Label>
-                    <div className="col-span-3">{selectedDoctor.appointments}</div>
-                  </div>
+        <>
+          <Dialog
+            open={isEditDialogOpen}
+            onOpenChange={(open) => {
+              setIsEditDialogOpen(open)
+              if (!open) {
+                setSelectedDoctor(null)
+                setIsEditing(false)
+              }
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Doctor</DialogTitle>
+              </DialogHeader>
+              <DoctorForm onSubmit={handleEditDoctor} initialData={selectedDoctor} specialties={specialties} closeDialog={() => setIsEditDialogOpen(false)} />
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={isViewDialogOpen}
+            onOpenChange={(open) => {
+              setIsViewDialogOpen(open)
+              if (!open) {
+                setSelectedDoctor(null)
+                setIsEditing(false)
+              }
+            }}
+          >
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Doctor Details</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Name</Label>
+                  <div className="col-span-3">{selectedDoctor.name}</div>
                 </div>
-                <DialogFooter>
-                  <Button onClick={() => setIsEditing(true)}>Edit</Button>
-                  <Button variant="destructive" onClick={() => handleDeleteDoctor(selectedDoctor.id)}>
-                    Delete
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Specialization</Label>
+                  <div className="col-span-3">{selectedDoctor.specialization}</div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Experience</Label>
+                  <div className="col-span-3">{selectedDoctor.experience}</div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right">Contact</Label>
+                  <div className="col-span-3">{selectedDoctor.contact}</div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={() => { setIsEditDialogOpen(true); setIsViewDialogOpen(false); }}>Edit</Button>
+                <Button variant="destructive" onClick={() => handleDeleteDoctor(selectedDoctor._id)}>
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
     </>
   )
 }
 
-function DoctorForm({ onSubmit, initialData = {}, specialties }) {
-  const [doctor, setDoctor] = useState(initialData)
+type DoctorFormProps = {
+  onSubmit: (doctor: Doctor) => void
+  initialData?: Partial<Doctor>
+  specialties: string[]
+  closeDialog: () => void
+}
 
-  const handleSubmit = (e) => {
+function DoctorForm({ onSubmit, initialData = {}, specialties, closeDialog }: DoctorFormProps) {
+  const [doctor, setDoctor] = useState<Doctor>({
+    _id: initialData._id || "",
+    name: initialData.name || "",
+    specialization: initialData.specialization || "",
+    experience: initialData.experience || 0,
+    contact: initialData.contact || "",
+    hospitalId: initialData.hospitalId || "",
+    createdAt: initialData.createdAt || "",
+    updatedAt: initialData.updatedAt || ""
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit(doctor)
+    closeDialog()
   }
 
   return (
@@ -223,18 +311,18 @@ function DoctorForm({ onSubmit, initialData = {}, specialties }) {
           </Label>
           <Input
             id="name"
-            value={doctor.name || ""}
+            value={doctor.name}
             onChange={(e) => setDoctor({ ...doctor, name: e.target.value })}
             className="col-span-3"
           />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="specialty" className="text-right">
-            Specialty
+          <Label htmlFor="specialization" className="text-right">
+            Specialization
           </Label>
-          <Select value={doctor.specialty || ""} onValueChange={(value) => setDoctor({ ...doctor, specialty: value })}>
+          <Select value={doctor.specialization} onValueChange={(value) => setDoctor({ ...doctor, specialization: value })}>
             <SelectTrigger className="col-span-3">
-              <SelectValue placeholder="Select a specialty" />
+              <SelectValue placeholder="Select a specialization" />
             </SelectTrigger>
             <SelectContent>
               {specialties.map((specialty) => (
@@ -246,25 +334,25 @@ function DoctorForm({ onSubmit, initialData = {}, specialties }) {
           </Select>
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="availability" className="text-right">
-            Availability
+          <Label htmlFor="experience" className="text-right">
+            Experience
           </Label>
           <Input
-            id="availability"
-            value={doctor.availability || ""}
-            onChange={(e) => setDoctor({ ...doctor, availability: e.target.value })}
+            id="experience"
+            type="number"
+            value={doctor.experience}
+            onChange={(e) => setDoctor({ ...doctor, experience: Number.parseInt(e.target.value) })}
             className="col-span-3"
           />
         </div>
         <div className="grid grid-cols-4 items-center gap-4">
-          <Label htmlFor="appointments" className="text-right">
-            Appointments
+          <Label htmlFor="contact" className="text-right">
+            Contact
           </Label>
           <Input
-            id="appointments"
-            type="number"
-            value={doctor.appointments || ""}
-            onChange={(e) => setDoctor({ ...doctor, appointments: Number.parseInt(e.target.value) })}
+            id="contact"
+            value={doctor.contact}
+            onChange={(e) => setDoctor({ ...doctor, contact: e.target.value })}
             className="col-span-3"
           />
         </div>
@@ -275,4 +363,3 @@ function DoctorForm({ onSubmit, initialData = {}, specialties }) {
     </form>
   )
 }
-
